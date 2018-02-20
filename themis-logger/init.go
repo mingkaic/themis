@@ -2,7 +2,7 @@ package tlogger
 
 import (
 	"github.com/Sirupsen/logrus"
-	_ "github.com/mingkaic/MockPDP/themis/themis-logger/default-plugin"
+	_ "github.com/infobloxopen/themis/themis-logger/default-logger"
 )
 
 func StandardLogger() *logrus.Logger {
