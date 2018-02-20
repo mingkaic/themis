@@ -11,7 +11,7 @@ type defaultLogConfig struct {
 	LogLevel string
 }
 
-var conf = &defaultLogConfig{}
+var conf defaultLogConfig
 
 func init() {
 	flag.StringVar(&conf.LogLevel, "log-level", "info", "[debug|info|warning|error|fatal|panic] set log level")
@@ -22,9 +22,9 @@ func init() {
 	}
 	logrus.SetLevel(parsedLevel)
 
-	block, err := json.MarshalIndent(conf, "", "  ")
+	block, err := json.MarshalIndent(&conf, "", "  ")
 	if err != nil {
 		logrus.Errorf("error: %s", err)
 	}
-	logrus.Infof("Configuration: \n%s", "LogConfig" + string(block))
+	logrus.Infof("Configuration: \n%s", "LogConfig"+string(block))
 }

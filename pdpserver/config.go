@@ -81,7 +81,7 @@ func init() {
 		}).Fatal("too big maximum number of parallel gRPC streams")
 	}
 
-	block, err := json.MarshalIndent(conf, "", "  ")
+	block, err := json.MarshalIndent(&conf, "", "  ")
 	if err != nil {
 		log.Errorf("error: %s", err)
 	}
