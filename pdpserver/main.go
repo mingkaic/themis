@@ -4,13 +4,19 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
+	log "github.com/infobloxopen/themis/themis-logger"
 
 	"github.com/infobloxopen/themis/pdpserver/server"
 )
 
 func main() {
 	logger := log.StandardLogger()
+	if hookup := log.StandardHook(); nil != hookup {
+		hookup.Start()
+		defer hookup.Stop()
+	}
+
 	logger.Info("Starting PDP server")
 
 	pdp := server.NewServer(
@@ -28,7 +34,7 @@ func main() {
 	err := pdp.LoadPolicies(conf.policy)
 	if err != nil {
 		logger.WithFields(
-			log.Fields{
+			logrus.Fields{
 				"policy": conf.policy,
 				"err":    err,
 			},

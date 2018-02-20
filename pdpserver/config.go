@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"math"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/infobloxopen/themis/themis-logger"
 
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdpserver/server"
@@ -32,6 +34,7 @@ type config struct {
 	profilerEP   string
 	mem          server.MemLimits
 	maxStreams   uint
+	LogConfig    tlogger.LogConfig
 }
 
 type stringSet []string
@@ -48,7 +51,6 @@ func (s *stringSet) Set(v string) error {
 var conf config
 
 func init() {
-	verbose := flag.Int("v", 1, "log verbosity (0 - error, 1 - warn (default), 2 - info, 3 - debug)")
 	flag.StringVar(&conf.policy, "p", "", "policy file to start with")
 	policyFmt := flag.String("pfmt", policyFormatNameYAML, "policy data format \"yaml\" or \"json\"")
 	flag.Var(&conf.content, "j", "JSON content files to start with")
@@ -62,7 +64,7 @@ func init() {
 
 	flag.Parse()
 
-	initLogging(*verbose)
+	conf.LogConfig = tlogger.ConfigLog()
 
 	p, ok := policyParsers[strings.ToLower(*policyFmt)]
 	if !ok {
@@ -82,4 +84,10 @@ func init() {
 			"limit":       math.MaxUint32,
 		}).Fatal("too big maximum number of parallel gRPC streams")
 	}
+
+	block, err := json.MarshalIndent(conf, "", "  ")
+	if err != nil {
+		log.Errorf("error: %s", err)
+	}
+	log.Infof("Configuration: \n%s", string(block))
 }

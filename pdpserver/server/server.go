@@ -19,6 +19,7 @@ import (
 	pbs "github.com/infobloxopen/themis/pdp-service"
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdp/jcon"
+	"github.com/infobloxopen/themis/themis-logger"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -138,7 +139,7 @@ type Server struct {
 // NewServer returns new Server instance
 func NewServer(opts ...Option) *Server {
 	o := options{
-		logger:  log.StandardLogger(),
+		logger:  tlogger.StandardLogger(),
 		service: ":5555",
 	}
 
