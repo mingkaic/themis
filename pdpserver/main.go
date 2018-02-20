@@ -12,11 +12,6 @@ import (
 
 func main() {
 	logger := log.StandardLogger()
-	if hookup := log.StandardHook(); nil != hookup {
-		hookup.Start()
-		defer hookup.Stop()
-	}
-
 	logger.Info("Starting PDP server")
 
 	pdp := server.NewServer(

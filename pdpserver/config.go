@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/infobloxopen/themis/themis-logger"
 
 	"github.com/infobloxopen/themis/pdp/ast"
 	"github.com/infobloxopen/themis/pdpserver/server"
@@ -34,7 +33,6 @@ type config struct {
 	profilerEP   string
 	mem          server.MemLimits
 	maxStreams   uint
-	LogConfig    tlogger.LogConfig
 }
 
 type stringSet []string
@@ -63,8 +61,6 @@ func init() {
 	flag.UintVar(&conf.maxStreams, "max-streams", 0, "maximum number of parallel gRPC streams (0 - use gRPC default)")
 
 	flag.Parse()
-
-	conf.LogConfig = tlogger.ConfigLog()
 
 	p, ok := policyParsers[strings.ToLower(*policyFmt)]
 	if !ok {
