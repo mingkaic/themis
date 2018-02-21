@@ -17,20 +17,20 @@ func main() {
 	pdp := server.NewServer(
 		server.WithLogger(logger),
 		server.WithPolicyParser(conf.policyParser),
-		server.WithServiceAt(conf.serviceEP),
-		server.WithControlAt(conf.controlEP),
-		server.WithHealthAt(conf.healthEP),
-		server.WithProfilerAt(conf.profilerEP),
-		server.WithTracingAt(conf.tracingEP),
+		server.WithServiceAt(conf.ServiceEP),
+		server.WithControlAt(conf.ControlEP),
+		server.WithHealthAt(conf.HealthEP),
+		server.WithProfilerAt(conf.ProfilerEP),
+		server.WithTracingAt(conf.TracingEP),
 		server.WithMemLimits(conf.mem),
-		server.WithMaxGRPCStreams(uint32(conf.maxStreams)),
+		server.WithMaxGRPCStreams(uint32(conf.MaxStreams)),
 	)
 
-	err := pdp.LoadPolicies(conf.policy)
+	err := pdp.LoadPolicies(conf.Policy)
 	if err != nil {
 		logger.WithFields(
 			logrus.Fields{
-				"policy": conf.policy,
+				"policy": conf.Policy,
 				"err":    err,
 			},
 		).Error("Failed to load policy. Continue with no policy...")
