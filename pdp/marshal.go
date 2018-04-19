@@ -8,6 +8,7 @@ import (
 // StorageMarshal interface defines functions
 // to capturing storage state information
 type StorageMarshal interface {
+	GetID() (string, bool)
 	MarshalWithDepth(out io.Writer, depth int) error
 	MarshalPath(ID string) func(io.Writer) error
 }

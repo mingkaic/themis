@@ -2,11 +2,14 @@ package pdp
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 )
+
+var pathReg = regexp.MustCompile(`((?:[^\/"']|"[^"]*"|'[^']*')+)`)
 
 // PolicyStorage is a storage for policies.
 type PolicyStorage struct {
@@ -55,6 +58,46 @@ func (s *PolicyStorage) NewTransaction(tag *uuid.UUID) (*PolicyStorageTransactio
 	}
 
 	return &PolicyStorageTransaction{tag: *tag, attrs: s.attrs, policies: s.policies}, nil
+}
+
+func (s PolicyStorage) GetByPath(path string) (StorageMarshal, error) {
+	var err error
+	pathArr := pathReg.Split(path, -1)
+	out, ok := s.policies.(StorageMarshal)
+	if !ok {
+		return nil, fmt.Errorf("storage root policy is not marshallable")
+	}
+	if out == nil {
+		return nil, fmt.Errorf("storage root policy is nil")
+	}
+	if len(pathArr) == 0 {
+		return out, nil
+	}
+	if ID, ok := out.GetID(); ok && ID == pathArr[0] {
+		for _, ID := range pathArr[1:] {
+			switch cur := out.(type) {
+			case *PolicySet:
+				_, curr, err := cur.getChild(ID)
+				if err != nil {
+					goto PathNotFound
+				}
+				out, ok = curr.(StorageMarshal)
+				if !ok {
+					return nil, fmt.Errorf("encountered non-marshallable")
+				}
+			case *Policy:
+				_, out, err = cur.getChild(ID)
+				if err != nil {
+					goto PathNotFound
+				}
+			case *Rule:
+				goto PathNotFound
+			}
+		}
+		return out, nil
+	}
+PathNotFound:
+	return nil, fmt.Errorf("path %s not found", path)
 }
 
 // Here set of supported update operations is defined.
