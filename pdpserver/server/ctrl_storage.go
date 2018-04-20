@@ -5,6 +5,12 @@ import (
 	"io"
 )
 
+const storageAPI = `PDP Storage Control API
+
+GET /search?query=<id> [get id of storage node and return the path to it]
+GET /storage/<start path...>?depth=<depth> [dump storage subtree of input depth at path]
+`
+
 // GetPath used by endpoint querying PolicyStorage
 // get path of object with input id
 func (s *Server) GetPath(out io.Writer, ID string) error {
@@ -15,8 +21,8 @@ func (s *Server) GetPath(out io.Writer, ID string) error {
 	if err != nil {
 		return err
 	}
-	cb, found := root.PathMarshal(ID)
-	if !found {
+	cb := root.MarshalPath(ID)
+	if cb == nil {
 		return fmt.Errorf("ID %s not found", ID)
 	}
 	return cb(out)
@@ -32,5 +38,5 @@ func (s *Server) DumpPath(out io.Writer, path string, depth int) error {
 	if err != nil {
 		return err
 	}
-	return root.DepthMarshal(out, depth)
+	return root.MarshalWithDepth(out, depth)
 }

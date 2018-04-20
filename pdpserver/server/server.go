@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/infobloxopen/themis/pdp/jcon"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"github.com/julienschmidt/httprouter"
 	ot "github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -75,6 +77,13 @@ func WithProfilerAt(addr string) Option {
 	}
 }
 
+// WithStorageAt returns a Option which sets storage endpoint
+func WithStorageAt(addr string) Option {
+	return func(o *options) {
+		o.storage = addr
+	}
+}
+
 // WithTracingAt returns a Option which sets tracing endpoint
 func WithTracingAt(addr string) Option {
 	return func(o *options) {
@@ -122,6 +131,7 @@ type options struct {
 	control   string
 	health    string
 	profiler  string
+	storage   string
 	tracing   string
 	memLimits *MemLimits
 	streams   uint32
@@ -142,10 +152,11 @@ type Server struct {
 	startOnce sync.Once
 	errCh     chan error
 
-	requests transport
-	control  transport
-	health   transport
-	profiler net.Listener
+	requests    transport
+	control     transport
+	health      transport
+	profiler    net.Listener
+	storageCtrl net.Listener
 
 	q *queue
 
@@ -343,6 +354,21 @@ func (s *Server) listenProfiler() error {
 	return nil
 }
 
+func (s *Server) listenStorage() error {
+	if len(s.opts.storage) <= 0 {
+		return nil
+	}
+
+	s.opts.logger.WithField("address", s.opts.storage).Info("Opening storage port")
+	ln, err := net.Listen("tcp", s.opts.storage)
+	if err != nil {
+		return err
+	}
+
+	s.storageCtrl = ln
+	return nil
+}
+
 func (s *Server) configureRequests() []grpc.ServerOption {
 	opts := []grpc.ServerOption{}
 	if s.opts.streams > 0 {
@@ -414,6 +440,9 @@ func (s *Server) Serve() error {
 	if err := s.listenProfiler(); err != nil {
 		return err
 	}
+	if err := s.listenStorage(); err != nil {
+		return err
+	}
 
 	if s.health.iface != nil {
 		healthMux := http.NewServeMux()
@@ -443,6 +472,55 @@ func (s *Server) Serve() error {
 		go func(l net.Listener) {
 			s.errCh <- profilerServer.Serve(l)
 		}(s.profiler)
+	}
+
+	if s.storageCtrl != nil {
+		storageMux := httprouter.New()
+		storageMux.GET("/", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+			io.WriteString(w, storageAPI)
+		})
+		storageMux.GET("/search", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+			queryOpt := r.URL.Query()
+			idOpt, ok := queryOpt["query"]
+			if !ok {
+				io.WriteString(w, "query id not specified")
+				return
+			}
+			ID := idOpt[0]
+			fmt.Println(ID)
+			if err := s.GetPath(w, ID); err != nil {
+				io.WriteString(w, err.Error())
+			}
+		})
+		storageMux.GET("/storage/*path", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+			queryOpt := r.URL.Query()
+			path := ps.ByName("path")
+			depthOpt, ok := queryOpt["depth"]
+			if !ok {
+				io.WriteString(w, "depth option not specified")
+				return
+			}
+			depthStr := depthOpt[0]
+			fmt.Println(path)
+			fmt.Println(depthStr)
+			depth, err := strconv.ParseInt(depthStr, 10, 64)
+			if err != nil {
+				io.WriteString(w, err.Error())
+			}
+			if err = s.DumpPath(w, path, int(depth)); err != nil {
+				io.WriteString(w, err.Error())
+			}
+		})
+
+		storageServer := &http.Server{Handler: storageMux}
+		defer func() {
+			s.storageCtrl.Close()
+			s.storageCtrl = nil
+		}()
+
+		go func(l net.Listener) {
+			s.errCh <- storageServer.Serve(l)
+		}(s.storageCtrl)
 	}
 
 	s.opts.logger.Info("Creating service protocol handler")
