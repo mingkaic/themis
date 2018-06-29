@@ -3,6 +3,7 @@
 package pdp
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -349,6 +350,18 @@ type Response struct {
 // expression) and error if any occurs during evaluation.
 func (r Response) Status() (int, []AttributeAssignmentExpression, error) {
 	return r.Effect, r.obligations, r.status
+}
+
+func (r Response) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Effect      string                          `json:"effect"`
+		Status      boundError                      `json:"status"`
+		Obligations []AttributeAssignmentExpression `json:"obligations"`
+	}{
+		Effect:      effectNames[r.Effect],
+		Status:      r.status,
+		Obligations: r.obligations,
+	})
 }
 
 // Evaluable interface defines abstract PDP's entity which can be evaluated
